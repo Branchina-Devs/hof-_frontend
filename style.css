@@ -41,6 +41,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  overflow: hidden;
 }
 
 .masthead-left {
@@ -79,6 +80,28 @@ body {
   color: var(--ink3);
   letter-spacing: 0.05em;
   line-height: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.5rem;
+}
+
+.masthead-right-text {
+  font-family: var(--serif);
+  font-size: 0.78rem;
+  color: var(--ink3);
+}
+
+.masthead-logo {
+  width: 75px;
+  height: 75px;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  transform-origin: center;
+}
+
+.masthead-logo:hover {
+  transform: scale(1.1) rotate(-3deg);
 }
 
 .masthead-rule {
@@ -120,12 +143,79 @@ body {
   margin-bottom: 1rem;
 }
 
+/* ── YEAR GROUP STYLING ── */
+.year-group {
+  margin-bottom: 1rem;
+}
+
+.year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--rule2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  position: relative;
+  padding-left: 1.2rem;
+}
+
+.year-header::before {
+  content: '▼';
+  position: absolute;
+  left: 0;
+  font-size: 0.7rem;
+  color: var(--red);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+.year-group.expanded .year-header::before {
+  transform: rotate(-90deg);
+}
+
+.year-header:hover {
+  background: rgba(180, 170, 150, 0.03);
+}
+
+.year-label {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+}
+
+.year-count {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--ink3);
+  background: transparent;
+  padding: 0.15rem 0.35rem;
+  border-radius: 2px;
+  border: 1px solid var(--rule2);
+  letter-spacing: 0.05em;
+}
+
+.year-projects {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.year-projects.expanded {
+  max-height: 999px;
+}
+
 .project-item {
   padding: 0.6rem 0 0.6rem 0.25rem;
   border-bottom: 1px solid var(--rule2);
   cursor: pointer;
   position: relative;
   transition: padding-left 0.2s;
+  margin-left: 0.5rem;
 }
 
 .project-item::before {
@@ -562,13 +652,52 @@ a.author-gh:hover {
 /* ── RESPONSIVE ── */
 @media (max-width: 960px) {
   .page { grid-template-columns: 1fr; }
-  .col-left,
-  .col-right          { position: static; height: auto; border: none; border-bottom: 1px solid var(--rule); }
-  .col-right          { order: 3; }
-  .article            { padding: 1.5rem 1.5rem 3rem; }
-  .masthead           { grid-template-columns: 1fr; text-align: center; }
-  .masthead-left,
-  .masthead-right     { display: none; }
+  
+  .col-left {
+    position: static;
+    height: auto;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 1.5rem 1.5rem 1rem;
+  }
+  
+  .col-right {
+    position: static;
+    height: auto;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    order: 3;
+  }
+  
+  .article { padding: 1.5rem 1.5rem 3rem; }
+  .masthead { grid-template-columns: 1fr; text-align: center; }
+  .masthead-left, .masthead-right { display: none; }
+  
+  /* Mobile year group styling - make them more compact */
+  .year-header {
+    padding: 0.8rem 0.75rem;
+    border-bottom: 2px solid var(--rule);
+    margin-bottom: 0.5rem;
+  }
+  
+  .year-label {
+    font-size: 1.05rem;
+  }
+  
+  .year-projects {
+    border-left: 2px solid var(--rule2);
+    padding-left: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .project-item {
+    margin-left: 0;
+    padding: 0.5rem 0 0.5rem 0.5rem;
+  }
+  
+  .project-item::before {
+    left: -0.6rem;
+  }
 }
 
 ::-webkit-scrollbar       { width: 4px; }

@@ -78,7 +78,7 @@ async function resolveAuthor(student) {
   // 2. Pure fallback — no GitHub data
   return { avatar: '', displayName: fallbackName, ghUser: student.github_username || '' };
 }
-// ── Load all projects and populate the left sidebar
+// ── Load all projects and populate the left sidebar with year grouping
 async function loadProjects() {
   try {
     const [progetti, psLinks, studenti] = await Promise.all([
@@ -97,25 +97,87 @@ async function loadProjects() {
       return;
     }
 
+    // ── Group projects by year
+    const projectsByYear = {};
+    progetti.forEach(p => {
+      const year = p.Data_P ? new Date(p.Data_P).getFullYear() : 'Senza Data';
+      if (!projectsByYear[year]) projectsByYear[year] = [];
+      projectsByYear[year].push(p);
+    });
+
+    // ── Sort years in descending order (newest first)
+    const years = Object.keys(projectsByYear).sort((a, b) => {
+      if (a === 'Senza Data') return 1;
+      if (b === 'Senza Data') return -1;
+      return Number(b) - Number(a);
+    });
+
+    // ── Sort projects within each year by date (newest first)
+    years.forEach(year => {
+      projectsByYear[year].sort((a, b) => {
+        const dateA = a.Data_P ? new Date(a.Data_P).getTime() : 0;
+        const dateB = b.Data_P ? new Date(b.Data_P).getTime() : 0;
+        return dateB - dateA;
+      });
+    });
+
+    // ── Render year groups
     list.innerHTML = '';
-    progetti.forEach((p, i) => {
-      const el   = document.createElement('div');
-      el.className  = 'project-item';
-      el.dataset.id = p.id_p;
+    years.forEach((year, yearIndex) => {
+      const yearGroup = document.createElement('div');
+      yearGroup.className = 'year-group';
 
-      const date = p.Data_P
-        ? new Date(p.Data_P).toLocaleDateString('it-IT', { year: 'numeric', month: 'long' })
-        : '';
-
-      el.innerHTML = `
-        <div class="project-item-num">№ ${String(i + 1).padStart(2, '0')}</div>
-        <div class="project-item-name">${esc(p.Nome_P)}</div>
-        ${date ? `<div class="project-item-date">${date}</div>` : ''}
+      const yearHeader = document.createElement('div');
+      yearHeader.className = 'year-header';
+      yearHeader.dataset.year = year;
+      yearHeader.innerHTML = `
+        <div class="year-label">${year}</div>
+        <span class="year-count">${projectsByYear[year].length}</span>
       `;
 
-      el.addEventListener('click', () => openProject(p, studenti, psLinks));
-      list.appendChild(el);
+      const projectsContainer = document.createElement('div');
+      projectsContainer.className = 'year-projects';
+      projectsContainer.style.maxHeight = yearIndex === 0 ? '999px' : '0';
+      projectsContainer.dataset.expanded = yearIndex === 0 ? 'true' : 'false';
+
+      // ── Render projects within year
+      projectsByYear[year].forEach((p, i) => {
+        const el = document.createElement('div');
+        el.className = 'project-item';
+        el.dataset.id = p.id_p;
+
+        const date = p.Data_P
+          ? new Date(p.Data_P).toLocaleDateString('it-IT', { year: 'numeric', month: 'long' })
+          : '';
+
+        el.innerHTML = `
+          <div class="project-item-num">№ ${String(i + 1).padStart(2, '0')}</div>
+          <div class="project-item-name">${esc(p.Nome_P)}</div>
+          ${date ? `<div class="project-item-date">${date}</div>` : ''}
+        `;
+
+        el.addEventListener('click', () => openProject(p, studenti, psLinks));
+        projectsContainer.appendChild(el);
+      });
+
+      // ── Year header click handler for expand/collapse
+      yearHeader.addEventListener('click', (e) => {
+        const isExpanded = projectsContainer.dataset.expanded === 'true';
+        projectsContainer.style.maxHeight = isExpanded ? '0' : '999px';
+        projectsContainer.dataset.expanded = !isExpanded;
+        yearGroup.classList.toggle('expanded');
+      });
+
+      yearGroup.appendChild(yearHeader);
+      yearGroup.appendChild(projectsContainer);
+      list.appendChild(yearGroup);
     });
+
+    // ── Expand first year by default
+    if (years.length > 0) {
+      const firstYearGroup = list.querySelector('.year-group');
+      firstYearGroup?.classList.add('expanded');
+    }
 
   } catch {
     document.getElementById('projectList').innerHTML =
@@ -133,12 +195,15 @@ async function openProject(progetto, studenti, psLinks) {
   document.getElementById('mainContent').innerHTML =
     '<div class="state-loading-msg"><span class="loading-dots">Caricamento articolo</span></div>';
 
-  // Update masthead right corner
+  // Update masthead right corner with logo and project info
   const date = progetto.Data_P
     ? new Date(progetto.Data_P).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
-  document.getElementById('mastheadRight').innerHTML =
-    `<em style="font-family:var(--serif);font-style:italic;">${esc(progetto.Nome_P)}</em><br/>${date}`;
+  document.getElementById('mastheadRight').innerHTML = `
+    <div class="masthead-right-text">
+      <em style="font-family:var(--serif);font-style:italic;">${esc(progetto.Nome_P)}</em><br/>${date}
+    </div>
+    <img src="branchina_logo.png" alt="Branchina" class="masthead-logo"/>`;
 
   // Get students linked to this project
   const ids             = psLinks.filter(ps => ps.id_p == progetto.id_p).map(ps => ps.id_s);
