@@ -13,14 +13,6 @@ function rawBaseUrl(repoGit) {
   return `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/`;
 }
 
-// ── Derive the owner username from a GitHub repo URL
-// Used as a fallback to fetch GitHub profile when the student has no github_username
-function ownerFromRepoGit(repoGit) {
-  if (!repoGit) return null;
-  const parts = repoGit.replace(/\/$/, '').split('/');
-  return parts[3] || null;
-}
-
 // ── Fetch GitHub profile data for a username
 async function fetchGitHubUser(username) {
   if (!username) return null;
@@ -65,30 +57,10 @@ async function fetchGitHubContributors(repoGit) {
   }
 }
 
-// ── Resolve author info for a student (Fixed: no more group fallback)
-async function resolveAuthor(student) {
-  const fallbackName = `${student.nome} ${student.cognome}`;
-
-  // 1. Try the student's own github_username from the DB
-  if (student.github_username) {
-    const gh = await fetchGitHubUser(student.github_username);
-    if (gh) return { ...gh, displayName: gh.displayName || fallbackName };
-  }
-
-  // 2. Pure fallback — no GitHub data
-  return { avatar: '', displayName: fallbackName, ghUser: student.github_username || '' };
-}
 // ── Load all projects and populate the left sidebar with year grouping
 async function loadProjects() {
   try {
-    const [progetti, psLinks, studenti] = await Promise.all([
-      fetch(`${API}/progetti`).then(r => r.json()),
-      fetch(`${API}/progetto_studenti`).then(r => r.json()),
-      fetch(`${API}/studenti`).then(r => r.json()),
-    ]);
-
-    window._studenti = studenti;
-    window._psLinks  = psLinks;
+    const progetti = await fetch(`${API}/progetti`).then(r => r.json());
 
     const list = document.getElementById('projectList');
 
@@ -156,7 +128,7 @@ async function loadProjects() {
           ${date ? `<div class="project-item-date">${date}</div>` : ''}
         `;
 
-        el.addEventListener('click', () => openProject(p, studenti, psLinks));
+        el.addEventListener('click', () => openProject(p));
         projectsContainer.appendChild(el);
       });
 
@@ -186,7 +158,7 @@ async function loadProjects() {
 }
 
 // ── Open and render a project
-async function openProject(progetto, studenti, psLinks) {
+async function openProject(progetto) {
   // Mark active in sidebar
   document.querySelectorAll('.project-item').forEach(el =>
     el.classList.toggle('active', el.dataset.id == progetto.id_p));
@@ -205,10 +177,6 @@ async function openProject(progetto, studenti, psLinks) {
     </div>
     <img src="branchina_logo.png" alt="Branchina" class="masthead-logo"/>`;
 
-  // Get students linked to this project
-  const ids             = psLinks.filter(ps => ps.id_p == progetto.id_p).map(ps => ps.id_s);
-  const projectStudents = ids.map(id => studenti.find(s => s.id_s == id)).filter(Boolean);
-
   // Fetch README sections from backend
   let sections = [];
   try {
@@ -216,16 +184,9 @@ async function openProject(progetto, studenti, psLinks) {
     if (Array.isArray(data) && data[0]?.sections) sections = data[0].sections;
   } catch { /* silently continue with empty sections */ }
 
-  // Resolve author info automatically — no manual DB entry needed for GitHub data
-  // 1. Prova prima a prendere i veri contributors dalla repository GitHub
+  // Get authors from GitHub contributors
   let authors = await fetchGitHubContributors(progetto.repo_git);
-
-  // 2. Se non trova nessuno (es. repository vuota o limiti API), usa gli studenti nel DB
-  if (authors.length === 0) {
-    authors = await Promise.all(
-      projectStudents.map(s => resolveAuthor(s))
-    );
-  }
+  
   renderArticle(progetto, sections, authors);
 }
 
