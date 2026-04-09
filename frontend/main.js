@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000/api';
+const API = 'https://localhost:3000/api';
 
 // ── Derive the raw.githubusercontent.com base URL from a GitHub repo URL
 // e.g. https://github.com/Branchina-Devs/my-project
